@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageCircle, Mic, Paperclip, Send } from "lucide-react";
+import { MessageCircle, Mic, Paperclip, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/inbox";
 import { useChatboxStream } from "@/hooks/useChatboxStream";
@@ -711,6 +711,10 @@ export default function VisitorChatWidget({
     }
   };
 
+  const closeWidget = () => {
+    window.parent?.postMessage({ type: "bybelt-chatbox-close" }, "*");
+  };
+
   const toggleRecording = async () => {
     if (!sessionId || sending || config?.allowAudio === false) return;
 
@@ -773,6 +777,14 @@ export default function VisitorChatWidget({
             {humanMode ? "A teammate will reply shortly" : "Typically replies instantly"}
           </span>
         </div>
+        <button
+          type="button"
+          aria-label="Close chat"
+          onClick={closeWidget}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/85 hover:bg-white/15 hover:text-white"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[#F4F6FB] p-4">

@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { SessionState, SessionUser, SessionWorkspace } from "@/types/session";
 import { isAuthPagePath, loginUrlWithNext } from "@/lib/auth/safe-redirect";
-import { APP_INBOX_PATH } from "@/lib/marketing-paths";
+import { APP_INBOX_PATH, APP_WIDGET_PATH } from "@/lib/marketing-paths";
 import { agentDebugLog } from "@/lib/debug-agent-log";
 
 type SessionContextValue = SessionState & {
@@ -51,6 +51,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const refresh = useCallback(async () => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith(APP_WIDGET_PATH)) {
+      // The visitor-facing chat embed has no operator session — never redirect it to /login.
+      setState({ ...emptyState, loading: false });
+      return;
+    }
     try {
       const response = await fetch("/api/auth/session");
       if (!response.ok) {
