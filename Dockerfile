@@ -110,5 +110,18 @@ USER node
 # Expose port 3000 to allow HTTP traffic
 EXPOSE 3000
 
+# Phase 25: SIGTERM is the graceful-stop signal the app's shutdown hooks listen
+# for (background-job drain + Redis disconnect). This is Docker's default, made
+# explicit so `docker stop` always triggers a graceful drain. Pair with the
+# compose `stop_grace_period` (30s) so the drain window can complete.
+STOPSIGNAL SIGTERM
+
+# Container health via the /api/health endpoint (Phase 18). Uses Node's global
+# fetch (Node 18+) so no extra tooling is needed in the slim image. A non-200
+# response (e.g. DB down or invalid production config) marks the container
+# unhealthy.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 # Start Next.js standalone server
 CMD ["node", "server.js"]

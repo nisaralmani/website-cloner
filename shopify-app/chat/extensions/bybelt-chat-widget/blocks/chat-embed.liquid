@@ -1,0 +1,29 @@
+{% assign workspace_id = shop.metafields.bybelt.workspace_id.value %}
+{% assign bybelt_domain = shop.metafields.bybelt.domain.value %}
+{% assign widget_enabled = shop.metafields.bybelt.widget_enabled.value %}
+
+{% if widget_enabled == false or widget_enabled == "false" %}
+{% elsif workspace_id != blank and bybelt_domain != blank %}
+  <script>
+    window.BYBELT_CHAT = {
+      websiteId: {{ workspace_id | json }},
+      domain: {{ bybelt_domain | json }}{% if customer %},
+      customerEmail: {{ customer.email | json }},
+      customerName: {{ customer.name | json }}{% endif %}
+    };
+  </script>
+  <script src="https://chat.bybelt.com/embed.js" async defer></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Bybelt Chatbox",
+  "target": "body",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Live chat widget powered by Bybelt. Configure your workspace in the Bybelt Chat app, then enable this embed in Theme settings → App embeds."
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,23 @@
+services:
+  shopify-chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bybelt-shopify-chat:latest
+    container_name: bybelt-shopify-chat
+    restart: unless-stopped
+    ports:
+      - "3005:3000"
+    env_file:
+      - .env.production
+    volumes:
+      - ./prisma:/app/prisma
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bybelt_internal
+
+networks:
+  bybelt_internal:
+    name: bybelt_internal
+    external: true

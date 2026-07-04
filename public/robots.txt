@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /settings/
+Disallow: /analytics/
+Disallow: /campaigns/
+Disallow: /helpdesk/
+
+Sitemap: https://www.bybelt.com/sitemap.xml

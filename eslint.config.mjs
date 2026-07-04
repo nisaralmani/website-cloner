@@ -11,6 +11,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "shopify-app/**/build/**",
+    "shopify-app/**/.react-router/**",
     "next-env.d.ts",
   ]),
 ]);

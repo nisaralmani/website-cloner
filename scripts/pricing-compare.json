@@ -1,0 +1,1097 @@
+﻿[
+  {
+    "name": "Pricing",
+    "rows": [
+      {
+        "label": "Plan Price (per month)",
+        "values": [
+          "$ 0",
+          "$ 45",
+          "$ 95",
+          "$ 295"
+        ]
+      },
+      {
+        "label": "Agents included",
+        "values": [
+          "2",
+          "4",
+          "10",
+          "20+"
+        ]
+      },
+      {
+        "label": "Additional agents (per month)",
+        "values": [
+          false,
+          false,
+          false,
+          "$ 10"
+        ]
+      },
+      {
+        "label": "Customer Profiles",
+        "values": [
+          "100",
+          "5000",
+          "50000",
+          "200000"
+        ]
+      },
+      {
+        "label": "Sub-inboxes",
+        "values": [
+          "0",
+          "0",
+          "2",
+          "5"
+        ]
+      },
+      {
+        "label": "AI Credits",
+        "values": [
+          "$ 0",
+          "$ 5",
+          "$ 25",
+          "$ 75"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Team Inbox",
+    "rows": [
+      {
+        "label": "Cloud-based",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Mobile Apps",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Desktop Apps",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Real-time notifications",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Developer APIs",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Live Geolocation map",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Conversation transcript",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Conversation Triage",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Working hours settings",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Unlimited conversations",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Custom email domain",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Full conversations&#39; history",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Internal notes",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Visitor Banning",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "File Sharing",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Canned responses",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Conversation ratings",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Follow-up reminders",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Round-robin routing",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer Portal",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Channels",
+    "rows": [
+      {
+        "label": "Chat widget",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Contact Form",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Email",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Telegram",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Messenger",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "X (Twitter)",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Instagram",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "SMS",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Viber",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Phone",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Line",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "WhatsApp Business",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Integrations & Apps",
+    "rows": [
+      {
+        "label": "WordPress",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Shopify",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "WooCommerce",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Adobe Commerce",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Prestashop",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Slack",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "HubSpot",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Pipedrive",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Zoho CRM",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Segment",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Zapier",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Make",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "n8n",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Stripe",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "label": "Salesforce",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Chat Widget",
+    "rows": [
+      {
+        "label": "Chat SDKs",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Live Typing preview",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Typing status indicator",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Widget customization",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Proactive chat messages",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "MagicBrowse",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "LiveTranslate",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Video &amp; Audio chat",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Help widget",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "White label",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Artificial intelligence",
+    "rows": [
+      {
+        "label": "AI Agent",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "AI Knowledge training",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Internal AI Copilot",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Voice-to-text",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Multilingual AI",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "AI Writing Assistant",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "MCP Server",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Auto-tagging of conversations",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "AI-powered site search",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "label": "AI Inbox Spam filter",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "label": "Conversation summary",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "CRM",
+    "rows": [
+      {
+        "label": "Custom attributes",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer Profile",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer Segmentation",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Smart filters",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer-based notes",
+        "values": [
+          false,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer lifecycle tracking",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customer timeline activity",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Workflow",
+    "rows": [
+      {
+        "label": "No-code AI chatbot builder",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "AI-generated answers",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Scenario drafts",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Custom Input fields",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Conditional flows",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Keyword-based triggers",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Automation via APIs",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Webhook actions",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "CRM-based triggers",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Iframes",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "AI-agent blocks",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Unlimited AI chatbot templates",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      },
+      {
+        "label": "AI-based triggers",
+        "values": [
+          false,
+          false,
+          false,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Help Center",
+    "rows": [
+      {
+        "label": "Articles &amp; Categories",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customization",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Multilingual help center",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Help center SDK",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Search",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Article feedback",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Custom domain name",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Sitemap &amp; SEO meta data",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Analytics",
+    "rows": [
+      {
+        "label": "Prebuilt analytics",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Data export",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Custom dashboards",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "API Analytics",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Status Page",
+    "rows": [
+      {
+        "label": "Node monitoring",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Customization",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Notifications",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Announcement",
+        "values": [
+          false,
+          false,
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Data & Security",
+    "rows": [
+      {
+        "label": "Double-Factor Authentication",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "EU-Hosted",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Data Processing Agreement",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "TLS Encryption",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      },
+      {
+        "label": "Data replication",
+        "values": [
+          true,
+          true,
+          true,
+          true
+        ]
+      }
+    ]
+  }
+]

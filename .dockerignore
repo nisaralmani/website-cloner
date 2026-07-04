@@ -53,7 +53,9 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
-# Misc
+# Separate Shopify app (deployed via deploy-shopify-chat-vps.mjs)
+shopify-app
+
 *.tsbuildinfo
 README.md
 CHANGELOG.md

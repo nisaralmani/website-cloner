@@ -11,7 +11,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -26,6 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Secret hygiene
+        run: npm run check:secrets
+
+      - name: Mock runtime guard
+        run: npm run check:no-mock
+
+      - name: Security tests
+        run: npm run test:security
+
       - name: Lint
         run: npm run lint
 
@@ -34,3 +43,44 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Seed database
+        run: npm run db:seed
+        env:
+          SESSION_SECRET: ci-smoke-secret
+
+      - name: Route smoke (auth bypass)
+        run: |
+          DATABASE_PATH=./data/bybelt.db SESSION_SECRET=ci-smoke-secret ALLOW_INSECURE_SESSION_COOKIE=1 npx next start -p 3099 &
+          SERVER_PID=$!
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3099/ > /dev/null; then break; fi
+            sleep 1
+          done
+          SMOKE_BYPASS_AUTH=1 SESSION_SECRET=ci-smoke-secret SMOKE_BASE_URL=http://127.0.0.1:3099 node scripts/smoke-routes.mjs
+          kill $SERVER_PID || true
+
+      - name: Critical API journeys
+        run: |
+          DATABASE_PATH=./data/bybelt.db SESSION_SECRET=ci-smoke-secret ALLOW_INSECURE_SESSION_COOKIE=1 npx next start -p 3099 &
+          SERVER_PID=$!
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3099/initiate/login > /dev/null; then break; fi
+            sleep 1
+          done
+          SESSION_SECRET=ci-smoke-secret ALLOW_INSECURE_SESSION_COOKIE=1 E2E_BASE_URL=http://127.0.0.1:3099 node scripts/e2e-critical.mjs
+          kill $SERVER_PID || true
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Critical browser E2E
+        run: |
+          DATABASE_PATH=./data/bybelt.db SESSION_SECRET=ci-smoke-secret ALLOW_INSECURE_SESSION_COOKIE=1 npx next start -p 3099 &
+          SERVER_PID=$!
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3099/initiate/login > /dev/null; then break; fi
+            sleep 1
+          done
+          E2E_SKIP_WEBSERVER=1 SESSION_SECRET=ci-smoke-secret ALLOW_INSECURE_SESSION_COOKIE=1 E2E_BASE_URL=http://127.0.0.1:3099 npx playwright test
+          kill $SERVER_PID || true

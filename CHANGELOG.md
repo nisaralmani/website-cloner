@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Security:** `GET /api/ai/reviews` read `workspaceId` from an unauthenticated query parameter, allowing cross-tenant enumeration of another workspace's pending AI review queue (customer messages + AI-drafted replies). It also meant the endpoint 400'd on every real client call, since the Review Queue UI never sent that parameter. Now derives `workspaceId` exclusively from the authenticated session, matching every sibling `/api/ai/reviews/*` route. See `PHASE_26_RELEASE_CERTIFICATION.md`.
+
 ### Changed
 - Raised the project Node.js baseline to 24 across local development, CI, Docker, and contributor-facing documentation
 

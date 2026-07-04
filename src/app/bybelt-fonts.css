@@ -1,0 +1,66 @@
+/* Bybelt marketing fonts — Aeonik Pro + Inter */
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Aeonik Pro Light";
+  font-style: normal;
+  font-weight: 300;
+  src: url("/fonts/bybelt/aeonikpro_light.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Aeonik Pro Regular";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/bybelt/aeonikpro_regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Aeonik Pro Medium";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/bybelt/aeonikpro_medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Aeonik Pro Bold";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/bybelt/aeonikpro_bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Inter Medium";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/bybelt/inter_medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Bybelt Inter Bold";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/bybelt/inter_bold.woff2") format("woff2");
+}
+
+.bybelt-marketing {
+  font-family: "Bybelt Aeonik Pro Regular", var(--font-inter), "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.bybelt-marketing .font-sans-medium,
+.bybelt-marketing [class*="font-sans-medium"] {
+  font-family: "Bybelt Aeonik Pro Medium", inherit;
+  font-weight: 500;
+}
+
+.bybelt-marketing .font-sans-bold,
+.bybelt-marketing [class*="font-sans-bold"] {
+  font-family: "Bybelt Aeonik Pro Bold", inherit;
+  font-weight: 700;
+}
