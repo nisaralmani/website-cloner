@@ -87,6 +87,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     unread?: number;
     customerEmail?: string | null;
     assignedOperatorId?: string | null;
+    name?: string;
   };
   try {
     body = await request.json();
@@ -98,8 +99,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   const hasUnread = body.unread !== undefined;
   const hasCustomerEmail = body.customerEmail !== undefined;
   const hasAssignedOperator = body.assignedOperatorId !== undefined;
+  const hasName = body.name !== undefined;
 
-  if (!hasStatus && !hasUnread && !hasCustomerEmail && !hasAssignedOperator) {
+  if (!hasStatus && !hasUnread && !hasCustomerEmail && !hasAssignedOperator && !hasName) {
     return NextResponse.json({ error: "No conversation fields to update" }, { status: 400 });
   }
 
@@ -108,7 +110,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     unread?: number;
     customerEmail?: string | null;
     assignedOperatorId?: string | null;
+    name?: string;
   } = {};
+
+  if (hasName) {
+    const name = body.name?.trim() ?? "";
+    if (!name) {
+      return NextResponse.json({ error: "Subject cannot be empty" }, { status: 400 });
+    }
+    updates.name = name;
+  }
 
   if (hasStatus) {
     const status = body.status?.trim() ?? "";

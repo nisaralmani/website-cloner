@@ -70,7 +70,10 @@ import { useChatboxAppearanceFields } from "@/hooks/useChatboxAppearanceFields";
 import { useChatboxBehaviorFields } from "@/hooks/useChatboxBehaviorFields";
 import { useChatboxRestrictions } from "@/hooks/useChatboxRestrictions";
 import { useEmailDomainFields } from "@/hooks/useEmailDomainFields";
-import { useEmailDeliveryFields } from "@/hooks/useEmailDeliveryFields";
+import {
+  useEmailDeliveryFields,
+  type EmailConnectionTestResult,
+} from "@/hooks/useEmailDeliveryFields";
 import { useEmailSignature } from "@/hooks/useEmailSignature";
 import { useChatboxAttachmentSettings } from "@/hooks/useChatboxAttachmentSettings";
 import { useBillingPlans } from "@/hooks/useBillingPlans";
@@ -372,6 +375,9 @@ export default function SettingsDetail({
     error: emailDeliveryError,
     saving: emailDeliverySaving,
     updateField: updateEmailDeliveryField,
+    testing: emailDeliveryTesting,
+    testResult: emailDeliveryTestResult,
+    testConnection: testEmailDeliveryConnection,
   } = useEmailDeliveryFields(isEmailDelivery);
   const {
     enabled: emailSignatureEnabled,
@@ -1130,6 +1136,9 @@ export default function SettingsDetail({
                         updateField: updateEmailDeliveryField,
                         installingPluginId,
                         installPlugin: handleInstallPlugin,
+                        testing: emailDeliveryTesting,
+                        testResult: emailDeliveryTestResult,
+                        testConnection: () => void testEmailDeliveryConnection(),
                       }
                     : undefined,
                   isBillingPlans
@@ -1294,10 +1303,10 @@ export default function SettingsDetail({
 }
 
 function UpgradeGatePanel({ gate }: { gate: PageUpgradeGate }) {
-  const { upgrade, upgrading, error } = useUpgradePlan();
+  const { openBilling, opening: upgrading, error } = useUpgradePlan();
 
   const handleUpgrade = () => {
-    void upgrade("Essentials");
+    void openBilling();
   };
 
   return (
@@ -1563,6 +1572,9 @@ function renderItem(
     updateField: (field: SmtpFieldKey, value: string) => Promise<boolean>;
     installingPluginId: string | null;
     installPlugin: (pluginId: string) => Promise<void>;
+    testing: boolean;
+    testResult: EmailConnectionTestResult | null;
+    testConnection: () => void;
   },
   billingPlansContext?: {
     plans: import("@/types/billing").WorkspacePlan[];
@@ -3282,6 +3294,43 @@ function renderItem(
           </button>
         </div>
       );
+
+    case "emailConnectionTest": {
+      const result = emailDeliveryContext?.testResult;
+      const renderStatus = (label: string, status?: { ok: boolean; error?: string }) => {
+        if (!status) return null;
+        return (
+          <p
+            key={label}
+            className={cn(
+              "text-sm font-medium",
+              status.ok ? "text-[#40B630]" : "text-[#D14343]",
+            )}
+          >
+            {label}: {status.ok ? "Connected" : status.error || "Failed"}
+          </p>
+        );
+      };
+
+      return (
+        <div key={key} className={cn("flex flex-col gap-2", inGrid && "col-span-2")}>
+          <button
+            type="button"
+            disabled={!emailDeliveryContext || emailDeliveryContext.testing}
+            onClick={() => emailDeliveryContext?.testConnection()}
+            className="inline-flex h-9 w-fit items-center gap-1.5 rounded border border-[#E6EAF0] bg-white px-3 text-[13px] font-bold text-[#1c293b] disabled:opacity-50"
+          >
+            {emailDeliveryContext?.testing ? "Testing…" : item.button}
+          </button>
+          {result && (
+            <div className="flex flex-col gap-1">
+              {renderStatus("IMAP", result.imap)}
+              {renderStatus("SMTP", result.smtp)}
+            </div>
+          )}
+        </div>
+      );
+    }
 
     case "infoStatusBlock":
       return (

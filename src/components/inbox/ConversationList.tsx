@@ -88,14 +88,14 @@ function ConversationCard({
         onSelect(conversation.id);
       }}
       className={cn(
-        "flex min-h-[75px] cursor-pointer items-center gap-2 rounded-lg pt-[14px] pr-4 pb-4 pl-4",
+        "group flex min-h-[75px] cursor-pointer items-center gap-2 rounded-lg pt-[14px] pr-4 pb-4 pl-4",
         isPending || isUnread ? "bg-[#EBF3FE]" : "bg-white hover:bg-[#F4F6FB]",
         isSnoozed && "opacity-80",
         isSelected && "border-l-[3px] border-[#0093ee] pl-[13px]",
         isBulkSelected && "ring-2 ring-inset ring-[#1972F5]",
       )}
     >
-      {showBulkCheckbox && (
+      {showBulkCheckbox ? (
         <input
           type="checkbox"
           checked={Boolean(isBulkSelected)}
@@ -108,16 +108,16 @@ function ConversationCard({
           onClick={(event) => event.stopPropagation()}
           className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#1972F5] accent-[#1972F5]"
         />
+      ) : (
+        <input
+          type="checkbox"
+          checked={false}
+          aria-label={isUnread ? "Mark conversation as read" : "Mark conversation as unread"}
+          onChange={() => onToggleUnread?.(conversation.id, !isUnread)}
+          onClick={(event) => event.stopPropagation()}
+          className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#D7DCE5] accent-[#1972F5] opacity-0 group-hover:opacity-100"
+        />
       )}
-
-      <input
-        type="checkbox"
-        checked={isUnread}
-        aria-label={isUnread ? "Mark conversation as read" : "Mark conversation as unread"}
-        onChange={() => onToggleUnread?.(conversation.id, !isUnread)}
-        onClick={(event) => event.stopPropagation()}
-        className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#D7DCE5] accent-[#1972F5]"
-      />
 
       <div className="relative shrink-0">
         <div
@@ -246,6 +246,8 @@ export default function ConversationList({
   onShareConversation,
   listFilters,
   onListFiltersChange,
+  onListHoverStart,
+  onListHoverEnd,
 }: {
   conversations: Conversation[];
   loading?: boolean;
@@ -275,6 +277,8 @@ export default function ConversationList({
   onShareConversation?: () => void;
   listFilters?: ConversationListFiltersState;
   onListFiltersChange?: (filters: ConversationListFiltersState) => void;
+  onListHoverStart?: () => void;
+  onListHoverEnd?: () => void;
 }) {
   const customize = useInboxCustomizeOptional();
   const resolvedCustomize = customize ?? DEFAULT_INBOX_CUSTOMIZE_PREFERENCES;
@@ -413,7 +417,11 @@ export default function ConversationList({
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-1 overflow-y-auto bg-[#F4F6FB] p-2">
+      <div
+        className="flex flex-1 flex-col gap-1 overflow-y-auto bg-[#F4F6FB] p-2"
+        onMouseEnter={onListHoverStart}
+        onMouseLeave={onListHoverEnd}
+      >
         {loading ? (
           <p className="px-2 py-4 text-center text-sm text-[#828EA1]">Loading conversations…</p>
         ) : error ? (

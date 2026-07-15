@@ -9,7 +9,10 @@ import { autoAssignOperatorOnReply } from "@/lib/inbox/routing-preferences";
 import { rerunRoutingIfAssignedOperatorOffline } from "@/lib/routing-rules/rerun-offline";
 import { insertConversationMessage } from "@/lib/inbox/conversation-messages";
 import { toApiMessage } from "@/lib/inbox/mappers";
-import { selectConversationMessagesAfter } from "@/lib/inbox/message-queries";
+import {
+  selectConversationMessages,
+  selectConversationMessagesAfter,
+} from "@/lib/inbox/message-queries";
 import {
   publishConversationUpdated,
   publishMessageCreated,
@@ -18,6 +21,8 @@ import { fetchWorkspaceConversations } from "@/lib/inbox/snapshot";
 import { publishConversationTyping } from "@/lib/inbox/typing";
 import { markVisitorMessagesRead } from "@/lib/inbox/message-receipts";
 import { deliverWorkspaceWebhooks } from "@/lib/workspaces/webhook-delivery";
+import { insertInternalSystemNote } from "@/lib/chatbox/widget-thread";
+import { isWorkspaceSmtpConfigured, sendMailSmtp } from "@/lib/email/smtp-transport";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -161,5 +166,62 @@ export async function POST(request: Request, context: RouteContext) {
   await markVisitorMessagesRead(db, workspaceId, id);
   await publishOperatorMessage(workspaceId, id, apiMessage);
 
+  if (conversation.channel?.toLowerCase() === "email" && conversation.customerEmail) {
+    await sendOperatorReplyByEmail(db, workspaceId, id, conversation, displayText);
+  }
+
   return NextResponse.json({ message: apiMessage });
+}
+
+/**
+ * Conversations created from an inbound email only ever get a reply back to
+ * the customer's mailbox via SMTP — the AI auto-responder already does this
+ * (see lib/email/ai-auto-responder.ts), but a human operator's manual reply
+ * from the inbox never did, so a customer who emailed in would see the
+ * operator's answer in Bybelt yet never actually receive it. A send failure
+ * is recorded as an internal note rather than failing the request — the
+ * reply is already saved in the inbox regardless of delivery outcome.
+ */
+async function sendOperatorReplyByEmail(
+  db: Awaited<ReturnType<typeof getDb>>,
+  workspaceId: string,
+  conversationId: string,
+  conversation: NonNullable<Awaited<ReturnType<typeof getConversationForWorkspace>>>,
+  text: string,
+) {
+  if (!(await isWorkspaceSmtpConfigured(workspaceId))) {
+    await insertInternalSystemNote(
+      db,
+      workspaceId,
+      conversationId,
+      "Reply saved but not emailed — custom SMTP is not configured for this workspace.",
+    );
+    return;
+  }
+
+  const threadMessages = (
+    await selectAll(selectConversationMessages(db, conversationId))
+  ).map((row) => row.message);
+  const lastInbound = [...threadMessages].reverse().find((m) => m.from === "visitor");
+  const priorIds = threadMessages.map((m) => m.rfcMessageId).filter(Boolean) as string[];
+  const subject = conversation.name.startsWith("Re:")
+    ? conversation.name
+    : `Re: ${conversation.name}`;
+
+  const result = await sendMailSmtp(workspaceId, {
+    to: conversation.customerEmail!,
+    subject,
+    text,
+    inReplyTo: lastInbound?.rfcMessageId ?? undefined,
+    references: priorIds,
+  });
+
+  if (!result.sent) {
+    await insertInternalSystemNote(
+      db,
+      workspaceId,
+      conversationId,
+      `Reply saved but the email could not be delivered: ${result.reason ?? "unknown error"}`,
+    );
+  }
 }

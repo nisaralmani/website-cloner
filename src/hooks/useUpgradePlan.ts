@@ -3,46 +3,43 @@
 import { useCallback, useState } from "react";
 import { useSession } from "@/components/providers/SessionProvider";
 
-export type UpgradePlanTag = "Essentials" | "Plus";
-
+/**
+ * Billing lives in the Shopify admin app (Shopify is the billing source of truth).
+ * Upgrading no longer mutates state here — it resolves the merchant's Shopify
+ * "manage billing" URL and redirects there. Workspaces with no linked Shopify
+ * store are blocked with a clear message.
+ */
 export function useUpgradePlan() {
-  const { workspace, refresh } = useSession();
-  const [upgrading, setUpgrading] = useState(false);
+  const { workspace } = useSession();
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const upgrade = useCallback(
-    async (planTag: UpgradePlanTag) => {
-      if (!workspace?.id) {
-        setError("No active workspace.");
-        return false;
-      }
+  const openBilling = useCallback(async () => {
+    if (!workspace?.id) {
+      setError("No active workspace.");
+      return false;
+    }
 
-      setUpgrading(true);
-      setError(null);
-      try {
-        const response = await fetch("/api/billing/plans", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId: workspace.id,
-            planTag,
-          }),
-        });
-        if (!response.ok) {
-          const data = (await response.json()) as { error?: string };
-          throw new Error(data.error ?? "Failed to upgrade plan");
-        }
-        await refresh();
-        return true;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to upgrade plan.");
-        return false;
-      } finally {
-        setUpgrading(false);
+    setOpening(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/billing/plans", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = (await response.json()) as { manageUrl?: string; error?: string };
+      if (!response.ok || !data.manageUrl) {
+        throw new Error(data.error ?? "Could not open billing.");
       }
-    },
-    [refresh, workspace?.id],
-  );
+      window.location.href = data.manageUrl;
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open billing.");
+      return false;
+    } finally {
+      setOpening(false);
+    }
+  }, [workspace?.id]);
 
-  return { upgrade, upgrading, error };
+  return { openBilling, opening, error };
 }

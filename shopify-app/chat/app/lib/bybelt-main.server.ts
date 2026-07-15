@@ -68,6 +68,29 @@ export async function applyShopifyOrderToMainApp(
   return true;
 }
 
+export async function activateMainAppPlan(
+  workspaceId: string,
+  input: {
+    planTag: string;
+    status: string;
+    shopifySubscriptionId?: string | null;
+    shop?: string | null;
+  },
+): Promise<boolean> {
+  await requestMainApp(
+    "/api/billing/shopify/activate",
+    "POST",
+    {
+      workspaceId,
+      planTag: input.planTag,
+      status: input.status,
+      shopifySubscriptionId: input.shopifySubscriptionId ?? null,
+    },
+    { event: "shopify_billing_activate", workspaceId, shop: input.shop },
+  );
+  return true;
+}
+
 export async function notifyMainAppShopifyUninstalled(
   workspaceId: string,
   shop: string,

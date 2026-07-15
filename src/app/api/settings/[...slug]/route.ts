@@ -32,6 +32,7 @@ import {
   validateInterfaceField,
 } from "@/lib/auth/interface-preferences";
 import {
+  isSecretFieldKey,
   loadWorkspaceSettingFields,
   saveWorkspaceSettingField,
 } from "@/lib/settings/workspace-settings";
@@ -131,12 +132,17 @@ export async function GET(_request: Request, context: RouteContext) {
   } = { pageSlug, toggles };
 
   if (isWorkspaceFieldSettingsPage(pageSlug)) {
-    payload.fields = await loadWorkspaceSettingFields(
+    const fields: Record<string, string> = await loadWorkspaceSettingFields(
       db,
       session.workspace.id,
       pageSlug,
       workspaceFieldDefaults(pageSlug),
     );
+    // Never send decrypted secrets (e.g. SMTP/IMAP passwords) to the browser.
+    for (const key of Object.keys(fields)) {
+      if (isSecretFieldKey(key)) fields[key] = "";
+    }
+    payload.fields = fields;
   }
 
   if (isAvailabilityPage(pageSlug)) {

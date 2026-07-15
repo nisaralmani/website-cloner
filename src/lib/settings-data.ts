@@ -268,6 +268,10 @@ export type SectionItem =
       disabled?: boolean;
     }
   | {
+      kind: "emailConnectionTest";
+      button: string;
+    }
+  | {
       kind: "infoStatusBlock";
       title: string;
       paragraphs: { text: string; bold?: boolean }[];

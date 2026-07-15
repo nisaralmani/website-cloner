@@ -20,7 +20,7 @@ import { useSession } from "@/components/providers/SessionProvider";
 import { resolveMessageShortcutText } from "@/lib/message-shortcuts/validation";
 import { useInboxCustomize } from "@/components/providers/InboxCustomizeProvider";
 import { useShopifySyncStatus } from "@/hooks/useShopifySyncStatus";
-import { appConversationUrl, appSettingsPath } from "@/lib/marketing-paths";
+import { appConversationUrl } from "@/lib/marketing-paths";
 import type { Conversation } from "@/types/inbox";
 
 export default function InboxApp() {
@@ -37,7 +37,7 @@ export default function InboxApp() {
   const [listSort, setListSort] = useState<"recent" | "oldest" | "unread">("recent");
   const { user: sessionUser } = useSession();
   const { counts: inboxCounts } = useInboxCounts();
-  const { upgrade, upgrading } = useUpgradePlan();
+  const { openBilling, opening: upgrading } = useUpgradePlan();
   const shortcutsByBang = useMessageShortcutLookup(true);
   const { shortcuts: messageShortcuts } = useMessageShortcuts(true);
   const {
@@ -92,6 +92,9 @@ export default function InboxApp() {
     sendReminder,
     toggleUnread,
     updateCustomerEmail,
+    updateConversationName,
+    pauseListReorder,
+    resumeListReorder,
     upsertVisitorData,
     removeVisitorData,
     addConversationSegment,
@@ -335,6 +338,69 @@ export default function InboxApp() {
     [pathname, router, searchParams],
   );
 
+  const handleMarkSpam = useCallback(async () => {
+    if (!selectedId) return;
+    const marked = await addConversationSegment(selectedId, "spam");
+    if (marked) {
+      handleSelect(null);
+      void reloadList({ silent: true });
+    }
+  }, [addConversationSegment, handleSelect, reloadList, selectedId]);
+
+  const handleSetSubject = useCallback(
+    async (name: string) => {
+      if (!selectedId) return;
+      await updateConversationName(selectedId, name);
+    },
+    [selectedId, updateConversationName],
+  );
+
+  const handleSendTranscript = useCallback(async () => {
+    if (!selectedId) return;
+    const defaultEmail = details?.email?.trim() ?? "";
+    const to = window.prompt("Send transcript to:", defaultEmail);
+    if (!to?.trim()) return;
+    const response = await fetch(`/api/conversations/${selectedId}/transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: to.trim() }),
+    });
+    if (!response.ok) {
+      window.alert("Unable to send transcript.");
+      return;
+    }
+    window.alert(`Transcript sent to ${to.trim()}.`);
+  }, [details?.email, selectedId]);
+
+  const handleNextConversation = useCallback(() => {
+    if (!selectedId || conversations.length === 0) return;
+    const index = conversations.findIndex((conversation) => conversation.id === selectedId);
+    if (index === -1 || index >= conversations.length - 1) return;
+    handleSelect(conversations[index + 1].id);
+  }, [conversations, handleSelect, selectedId]);
+
+  const handlePreviousConversation = useCallback(() => {
+    if (!selectedId || conversations.length === 0) return;
+    const index = conversations.findIndex((conversation) => conversation.id === selectedId);
+    if (index <= 0) return;
+    handleSelect(conversations[index - 1].id);
+  }, [conversations, handleSelect, selectedId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (!event.ctrlKey || !event.altKey) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        handleNextConversation();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        handlePreviousConversation();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleNextConversation, handlePreviousConversation]);
+
   const handleDeleteConversation = useCallback(async () => {
     if (!selectedId) return;
     const confirmed = window.confirm("Delete this conversation permanently?");
@@ -436,8 +502,7 @@ export default function InboxApp() {
         onCreateSubInbox={() => void handleCreateSubInbox()}
         upgrading={upgrading}
         onUpgrade={async () => {
-          const ok = await upgrade("Essentials");
-          if (ok) router.push(appSettingsPath("billing/plans"));
+          await openBilling();
         }}
         shopifyLinked={shopifyStatus?.linked === true}
       />
@@ -483,6 +548,8 @@ export default function InboxApp() {
         onClearBulkSelection={handleClearBulkSelection}
         onCreateConversation={() => void handleCreateConversation()}
         creatingConversation={creatingConversation}
+        onListHoverStart={pauseListReorder}
+        onListHoverEnd={resumeListReorder}
       />
       {selected ? (
         <>
@@ -521,6 +588,15 @@ export default function InboxApp() {
               const url = appConversationUrl(selected.id);
               void navigator.clipboard.writeText(url);
             }}
+            onMarkSpam={() => void handleMarkSpam()}
+            onSetSubject={(name) => void handleSetSubject(name)}
+            onSendTranscript={() => void handleSendTranscript()}
+            onNextConversation={handleNextConversation}
+            onPreviousConversation={handlePreviousConversation}
+            hasNextConversation={
+              conversations.findIndex((c) => c.id === selected.id) < conversations.length - 1
+            }
+            hasPreviousConversation={conversations.findIndex((c) => c.id === selected.id) > 0}
           />
           <CustomerInfoPanel
             conversation={selected}

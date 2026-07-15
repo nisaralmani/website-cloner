@@ -58,6 +58,13 @@ interface ConversationDetailProps {
   customerPhone?: string | null;
   onMarkUnread?: () => void | Promise<unknown>;
   onCopyConversationLink?: () => void;
+  onMarkSpam?: () => void;
+  onSetSubject?: (name: string) => void;
+  onSendTranscript?: () => void;
+  onNextConversation?: () => void;
+  onPreviousConversation?: () => void;
+  hasNextConversation?: boolean;
+  hasPreviousConversation?: boolean;
 }
 
 const COMPOSER_TABS = [
@@ -121,6 +128,13 @@ export default function ConversationDetail({
   customerPhone = null,
   onMarkUnread,
   onCopyConversationLink,
+  onMarkSpam,
+  onSetSubject,
+  onSendTranscript,
+  onNextConversation,
+  onPreviousConversation,
+  hasNextConversation = false,
+  hasPreviousConversation = false,
 }: ConversationDetailProps) {
   const { user: sessionUser } = useSession();
   const [message, setMessage] = useState("");
@@ -395,6 +409,71 @@ export default function ConversationDetail({
                     Copy conversation link
                   </button>
                 ) : null}
+                {onSetSubject ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      const next = window.prompt("Set conversation subject", conversation.name);
+                      if (next?.trim()) onSetSubject(next.trim());
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm font-semibold text-[#2C405A] hover:bg-[#F9FAFB]"
+                  >
+                    Set Subject
+                  </button>
+                ) : null}
+                {onSendTranscript ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onSendTranscript();
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm font-semibold text-[#2C405A] hover:bg-[#F9FAFB]"
+                  >
+                    Send transcript
+                  </button>
+                ) : null}
+                {onPreviousConversation ? (
+                  <button
+                    type="button"
+                    disabled={!hasPreviousConversation}
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onPreviousConversation();
+                    }}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#2C405A] hover:bg-[#F9FAFB] disabled:opacity-40"
+                  >
+                    Previous
+                    <span className="text-xs font-normal text-[#828EA1]">Ctrl Alt ↑</span>
+                  </button>
+                ) : null}
+                {onNextConversation ? (
+                  <button
+                    type="button"
+                    disabled={!hasNextConversation}
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onNextConversation();
+                    }}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold text-[#2C405A] hover:bg-[#F9FAFB] disabled:opacity-40"
+                  >
+                    Next
+                    <span className="text-xs font-normal text-[#828EA1]">Ctrl Alt ↓</span>
+                  </button>
+                ) : null}
+                {onMarkSpam ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      onMarkSpam();
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm font-semibold text-[#EF4444] hover:bg-[#F9FAFB]"
+                  >
+                    Mark as spam
+                  </button>
+                ) : null}
                 {onDeleteConversation ? (
                   <button
                     type="button"
@@ -530,7 +609,6 @@ export default function ConversationDetail({
                       {m.text && !(m.attachment && m.text.startsWith("📎 ")) ? (
                         <p>{m.text}</p>
                       ) : null}
-                      {!m.attachment && m.text ? <p>{m.text}</p> : null}
                     </div>
                   </div>
                   <span className="pl-9 text-[11px] text-[#828EA1]">{m.time}</span>
@@ -545,7 +623,6 @@ export default function ConversationDetail({
                     <MessageAttachmentPreview attachment={m.attachment} variant="widget" />
                   )}
                   {m.text && !(m.attachment && m.text.startsWith("📎 ")) ? <p>{m.text}</p> : null}
-                  {!m.attachment && m.text ? <p>{m.text}</p> : null}
                 </div>
                 <span className="inline-flex items-center gap-1 text-[11px] text-[#828EA1]">
                   {m.time}

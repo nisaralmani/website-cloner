@@ -1795,12 +1795,12 @@ export const SETTINGS_REGISTRY: Record<string, PageConfig> = {
         ],
       },
       {
-        title: "Custom Email SMTP",
+        title: "Custom Email SMTP & IMAP",
         badge: { text: "inactive", tone: "orange", dot: true },
         items: [
           {
             kind: "toggle",
-            label: "Send all emails using my custom outbound SMTP server",
+            label: "Use custom SMTP/IMAP for this workspace's email channel",
             on: false,
           },
           {
@@ -1822,13 +1822,43 @@ export const SETTINGS_REGISTRY: Record<string, PageConfig> = {
           {
             kind: "field",
             label: "SMTP password",
-            placeholder: "••••••••",
+            placeholder: "Leave blank to keep current password",
           },
           {
             kind: "field",
             label: "From address",
             placeholder: "noreply@example.com",
+          },
+          {
+            kind: "field",
+            label: "From name",
+            placeholder: "Support",
+          },
+          { kind: "divider" },
+          {
+            kind: "field",
+            label: "IMAP host",
+            placeholder: "imap.example.com",
             full: true,
+          },
+          {
+            kind: "field",
+            label: "IMAP port",
+            placeholder: "993",
+          },
+          {
+            kind: "field",
+            label: "IMAP username",
+            placeholder: "username",
+          },
+          {
+            kind: "field",
+            label: "IMAP password",
+            placeholder: "Leave blank to keep current password",
+          },
+          {
+            kind: "emailConnectionTest",
+            button: "Test connection",
           },
         ],
       },

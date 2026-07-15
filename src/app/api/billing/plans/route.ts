@@ -4,7 +4,10 @@ import { getDb, selectAll } from "@/db/client";
 import { paymentMethods, workspaceMembers, workspaceSubscriptions, workspaces } from "@/db/schema";
 import { requireSession } from "@/lib/auth/request";
 import { toWorkspacePlan } from "@/lib/billing/plans";
-import { upgradeWorkspacePlan } from "@/lib/billing/upgrade-plan";
+import { fetchShopifyWorkspaceStatus } from "@/lib/integrations/shopify-internal-client";
+
+/** Stable handle from shopify.app.toml — used to deep-link the merchant to the app in Shopify admin. */
+const SHOPIFY_APP_HANDLE = "bybelt-live-chat";
 
 export async function GET() {
   const session = await requireSession();
@@ -47,32 +50,38 @@ export async function GET() {
   });
 }
 
-export async function PATCH(request: Request) {
+/**
+ * Billing is managed by Shopify. Plan changes are never applied here — they are
+ * initiated inside the Shopify admin app and written back via the internal
+ * `app_subscriptions/update` webhook. This handler only resolves where the
+ * merchant should go to manage their subscription. It always uses the session's
+ * own workspace (never a client-supplied id) to avoid cross-tenant access.
+ */
+export async function PATCH() {
   const session = await requireSession();
   if (!session?.workspace) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { workspaceId?: string; planTag?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  const status = await fetchShopifyWorkspaceStatus(session.workspace.id);
+  // A null result means the Shopify bridge threw (network error, timeout, non-2xx)
+  // — the link state is unknown, NOT known-unlinked. Reporting "connect your store"
+  // here would wrongly tell a linked, paying merchant they have no store during a
+  // transient bridge blip. Surface a retryable error instead.
+  if (status === null) {
+    return NextResponse.json(
+      { error: "Billing is temporarily unavailable. Please try again.", code: "bridge_unavailable" },
+      { status: 503 },
+    );
+  }
+  if (!status.linked || !status.shop) {
+    return NextResponse.json(
+      { error: "Connect your Shopify store to manage billing.", code: "not_linked" },
+      { status: 400 },
+    );
   }
 
-  const workspaceId = body.workspaceId?.trim() || session.workspace.id;
-  if (!body.planTag?.trim()) {
-    return NextResponse.json({ error: "planTag is required" }, { status: 400 });
-  }
-
-  const db = await getDb();
-  const result = await upgradeWorkspacePlan(db, workspaceId, body.planTag);
-  if (!result.ok) {
-    if ("reason" in result && result.reason === "not_found") {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-    return NextResponse.json({ error: result.error }, { status: 400 });
-  }
-
-  return NextResponse.json({ plan: result.plan });
+  const host = status.shop.includes(".") ? status.shop : `${status.shop}.myshopify.com`;
+  const manageUrl = `https://${host}/admin/apps/${SHOPIFY_APP_HANDLE}`;
+  return NextResponse.json({ manageUrl });
 }

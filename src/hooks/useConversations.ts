@@ -69,6 +69,33 @@ export function useInboxApp(
   const markAsReadRef = useRef<(id: string) => Promise<Conversation | null>>(async () => null);
   selectedIdRef.current = selectedId;
 
+  // While the pointer is over the conversation list, hold new list snapshots
+  // instead of applying them immediately. Reordering rows under the cursor
+  // (from live polling/SSE updates) causes clicks to land on the wrong row
+  // or miss entirely — see the "messages not opening" report.
+  const listReorderPausedRef = useRef(false);
+  const pendingConversationListRef = useRef<Conversation[] | null>(null);
+
+  const commitConversationList = useCallback((list: Conversation[]) => {
+    if (listReorderPausedRef.current) {
+      pendingConversationListRef.current = list;
+      return;
+    }
+    setConversations(list);
+  }, []);
+
+  const pauseListReorder = useCallback(() => {
+    listReorderPausedRef.current = true;
+  }, []);
+
+  const resumeListReorder = useCallback(() => {
+    listReorderPausedRef.current = false;
+    if (pendingConversationListRef.current) {
+      setConversations(pendingConversationListRef.current);
+      pendingConversationListRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     setVisitorTyping(false);
   }, [selectedId]);
@@ -102,7 +129,7 @@ export function useInboxApp(
         throw new Error("Failed to load conversations");
       }
       const data = (await response.json()) as { conversations: Conversation[] };
-      setConversations(data.conversations);
+      commitConversationList(data.conversations);
       if (!silent) setListError(null);
     } catch (loadError) {
       agentDebugLog("useConversations.ts:reloadList", "conversations load error surfaced", {
@@ -117,6 +144,7 @@ export function useInboxApp(
       if (!silent) setListLoading(false);
     }
   }, [
+    commitConversationList,
     listFilter.assignedOperatorId,
     listFilter.segment,
     listFilter.status,
@@ -129,7 +157,12 @@ export function useInboxApp(
   const applyConversationList = useCallback(
     (incoming: Conversation[]) => {
       if (!showSnoozed) {
-        setConversations(incoming);
+        commitConversationList(incoming);
+        return;
+      }
+
+      if (listReorderPausedRef.current) {
+        pendingConversationListRef.current = incoming;
         return;
       }
 
@@ -143,7 +176,7 @@ export function useInboxApp(
         return [...incoming, ...snoozedOnly];
       });
     },
-    [showSnoozed],
+    [commitConversationList, showSnoozed],
   );
 
   const applyMessages = useCallback((next: ApiMessage[]) => {
@@ -235,6 +268,9 @@ export function useInboxApp(
 
       const data = (await response.json()) as { messages: ApiMessage[] };
       appendMessages(data.messages);
+      if (data.messages.some((message) => message.from === "visitor")) {
+        void markAsReadRef.current(selectedId);
+      }
     } catch {
       // Silent poll fallback.
     }
@@ -370,6 +406,30 @@ export function useInboxApp(
         return false;
       } finally {
         setSavingEmail(false);
+      }
+    },
+    [applyConversationPatch],
+  );
+
+  const updateConversationName = useCallback(
+    async (id: string, name: string) => {
+      try {
+        const response = await fetch(`/api/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update conversation subject");
+        }
+
+        const data = (await response.json()) as { conversation: Conversation };
+        applyConversationPatch(data.conversation);
+        return true;
+      } catch {
+        setDetailError("Unable to update conversation subject.");
+        return false;
       }
     },
     [applyConversationPatch],
@@ -1040,6 +1100,9 @@ export function useInboxApp(
     markAsUnread,
     toggleUnread,
     updateCustomerEmail,
+    updateConversationName,
+    pauseListReorder,
+    resumeListReorder,
     upsertVisitorData,
     removeVisitorData,
     addConversationSegment,

@@ -3,7 +3,10 @@
  */
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AppDatabase } from "@/db/client";
+import { selectAll } from "@/db/client";
+import { workspaceSettings } from "@/db/schema";
 import { autoRespondToConversation } from "@/lib/email/ai-auto-responder";
 import { runJob } from "@/lib/jobs/runner";
 import {
@@ -15,6 +18,76 @@ import {
   isImapReady,
   type WorkspaceEmailConfig,
 } from "@/lib/email/workspace-config";
+
+const UID_VALIDITY_KEY = "email/inbound::imap-uidvalidity";
+const LAST_UID_KEY = "email/inbound::imap-last-uid";
+
+/**
+ * Per-workspace IMAP progress marker (UIDVALIDITY + highest processed UID),
+ * not the `\Seen` flag. `\Seen` is set by *any* IMAP client touching the
+ * mailbox (webmail, a phone's mail app, Outlook) — relying on it means a
+ * merchant who simply opens a support email in their own inbox causes it to
+ * silently never reach Bybelt. The message-id dedup in ingestInboundEmail
+ * already guards against double-processing, so tracking our own watermark is
+ * both more correct and safe to combine with a full first-run backfill.
+ */
+async function getUidWatermark(
+  db: AppDatabase,
+  workspaceId: string,
+): Promise<{ uidValidity: string; lastUid: number } | null> {
+  const rows = await selectAll(
+    db
+      .select({ key: workspaceSettings.settingKey, value: workspaceSettings.value })
+      .from(workspaceSettings)
+      .where(
+        and(
+          eq(workspaceSettings.workspaceId, workspaceId),
+          inArray(workspaceSettings.settingKey, [UID_VALIDITY_KEY, LAST_UID_KEY]),
+        ),
+      ),
+  );
+  const uidValidity = rows.find((r) => r.key === UID_VALIDITY_KEY)?.value;
+  const lastUid = rows.find((r) => r.key === LAST_UID_KEY)?.value;
+  if (!uidValidity || !lastUid) return null;
+  return { uidValidity, lastUid: Number(lastUid) };
+}
+
+async function setUidWatermark(
+  db: AppDatabase,
+  workspaceId: string,
+  uidValidity: string,
+  lastUid: number,
+): Promise<void> {
+  for (const [settingKey, value] of [
+    [UID_VALIDITY_KEY, uidValidity],
+    [LAST_UID_KEY, String(lastUid)],
+  ] as const) {
+    const existing = await selectAll(
+      db
+        .select({ key: workspaceSettings.settingKey })
+        .from(workspaceSettings)
+        .where(
+          and(
+            eq(workspaceSettings.workspaceId, workspaceId),
+            eq(workspaceSettings.settingKey, settingKey),
+          ),
+        ),
+    );
+    if (existing.length) {
+      await db
+        .update(workspaceSettings)
+        .set({ value })
+        .where(
+          and(
+            eq(workspaceSettings.workspaceId, workspaceId),
+            eq(workspaceSettings.settingKey, settingKey),
+          ),
+        );
+    } else {
+      await db.insert(workspaceSettings).values({ workspaceId, settingKey, value });
+    }
+  }
+}
 
 export interface PollResult {
   processed: number;
@@ -91,19 +164,30 @@ export async function pollWorkspaceInbox(
   // the try so a failure at connect()/getMailboxLock() cannot leak an open IMAP
   // socket — the finally always releases the lock and closes the connection.
   let lock: Awaited<ReturnType<typeof client.getMailboxLock>> | undefined;
+  let uidValidity = "";
+  let maxUidSeen = 0;
 
   try {
     await client.connect();
     lock = await client.getMailboxLock("INBOX");
-    const searchResult = await client.search({ seen: false }, { uid: true });
-    const uids = Array.isArray(searchResult) ? searchResult : [];
-    if (!uids.length) {
-      return result;
-    }
 
-    for (const uid of uids) {
-      const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
-      if (!msg) continue;
+    uidValidity = client.mailbox ? client.mailbox.uidValidity.toString() : "";
+    const stored = await getUidWatermark(db, workspaceId);
+    // No watermark yet, or the mailbox was recreated (UIDVALIDITY changed):
+    // process everything currently in the mailbox once. ingestInboundEmail's
+    // message-id dedup makes re-processing already-seen mail a no-op, so a
+    // full first-pass backfill is safe.
+    const startUid = stored && stored.uidValidity === uidValidity ? stored.lastUid + 1 : 1;
+    maxUidSeen = stored && stored.uidValidity === uidValidity ? stored.lastUid : 0;
+
+    for await (const msg of client.fetch(
+      `${startUid}:*`,
+      { source: true },
+      { uid: true },
+    )) {
+      if (msg.uid < startUid) continue;
+      maxUidSeen = Math.max(maxUidSeen, msg.uid);
+      const uid = msg.uid;
 
       try {
         const parsed = await simpleParser(msg.source as Buffer);
@@ -172,6 +256,15 @@ export async function pollWorkspaceInbox(
         client.close();
       } catch {
         // ignore.
+      }
+    }
+    if (uidValidity && maxUidSeen > 0) {
+      try {
+        await setUidWatermark(db, workspaceId, uidValidity, maxUidSeen);
+      } catch (error) {
+        result.errors.push(
+          `Failed to persist IMAP watermark: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
   }

@@ -1,7 +1,8 @@
 import db from "../db.server";
-import { registerWebhooks, sessionStorage } from "../shopify.server";
+import { registerWebhooks, sessionStorage, unauthenticated } from "../shopify.server";
 import { registerWebhooksWithRetry } from "./webhook-registration.server";
 import { countDeadLetters } from "./dead-letter.server";
+import { reconcileWorkspaceBillingFromShopify } from "./billing-reconcile.server";
 
 /**
  * Shopify reconciliation job (Phase 20 — Task 3).
@@ -30,6 +31,10 @@ export type ShopReconResult = {
   needsReauth: boolean;
   /** true = re-registered, false = attempt failed, null = skipped. */
   webhooksReregistered: boolean | null;
+  /** true = plan converged to Shopify truth, false = attempt failed, null = skipped. */
+  billingReconciled: boolean | null;
+  /** Plan tag Shopify reports as active for this shop (null when reconcile skipped/failed). */
+  billingPlanTag: string | null;
   staleSync: boolean;
   lastContactSyncAt: string | null;
   issues: string[];
@@ -43,6 +48,8 @@ export type ReconciliationReport = {
   needsReauthCount: number;
   staleSyncCount: number;
   invalidLinkCount: number;
+  billingReconciledCount: number;
+  billingFailedCount: number;
   deadLetterCount: number;
   shops: ShopReconResult[];
 };
@@ -83,6 +90,8 @@ export async function runReconciliation(
   let needsReauthCount = 0;
   let staleSyncCount = 0;
   let invalidLinkCount = 0;
+  let billingReconciledCount = 0;
+  let billingFailedCount = 0;
 
   for (const link of links) {
     const issues: string[] = [];
@@ -132,6 +141,34 @@ export async function runReconciliation(
       }
     }
 
+    // 3b. Billing reconciliation — converge the workspace plan to Shopify's
+    //     live subscription state. This is the automatic safety net when an
+    //     `app_subscriptions/update` webhook is lost or its bridge call fails:
+    //     the sweep re-derives the truth from Shopify and re-applies it. It is
+    //     idempotent (absolute-state write), so re-running it is a no-op when the
+    //     workspace is already correct.
+    let billingReconciled: boolean | null = null;
+    let billingPlanTag: string | null = null;
+    if (repair && hasSession && workspaceId) {
+      try {
+        const { admin } = await unauthenticated.admin(link.shop);
+        const result = await reconcileWorkspaceBillingFromShopify(
+          admin,
+          link.shop,
+          workspaceId,
+        );
+        billingReconciled = true;
+        billingPlanTag = result.planTag;
+        billingReconciledCount += 1;
+      } catch (error) {
+        billingReconciled = false;
+        billingFailedCount += 1;
+        issues.push(
+          `billing_reconcile_error:${error instanceof Error ? error.message : "unknown"}`,
+        );
+      }
+    }
+
     // 4. Stale synchronization state (report only — never auto-triggers a sync
     //    here; the existing sync cron owns that).
     const lastSync = link.lastContactSyncAt ? link.lastContactSyncAt.getTime() : null;
@@ -147,6 +184,8 @@ export async function runReconciliation(
       hasSession,
       needsReauth,
       webhooksReregistered,
+      billingReconciled,
+      billingPlanTag,
       staleSync,
       lastContactSyncAt: link.lastContactSyncAt?.toISOString() ?? null,
       issues,
@@ -169,6 +208,8 @@ export async function runReconciliation(
     needsReauthCount,
     staleSyncCount,
     invalidLinkCount,
+    billingReconciledCount,
+    billingFailedCount,
     deadLetterCount,
     shops,
   };
@@ -181,6 +222,8 @@ export async function runReconciliation(
     needsReauthCount,
     staleSyncCount,
     invalidLinkCount,
+    billingReconciledCount,
+    billingFailedCount,
     deadLetterCount,
   });
 

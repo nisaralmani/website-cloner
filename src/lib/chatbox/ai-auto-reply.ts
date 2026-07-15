@@ -1,36 +1,16 @@
-import { and, eq } from "drizzle-orm";
 import type { AppDatabase } from "@/db/client";
-import { selectOne } from "@/db/client";
-import { conversationSegments, workspaceSettings } from "@/db/schema";
+import { conversationSegments } from "@/db/schema";
 import { conversationNeedsHuman } from "@/lib/chatbox/human-handoff-state";
 import { processAiReply } from "@/lib/ai/orchestrator";
 import { runUnifiedAiDecision, messageNeedsOrderContext } from "@/lib/ai/safety-pipeline";
 import { getWorkspaceAgentConfig } from "@/lib/email/agent-config";
 import { insertInternalSystemNote } from "@/lib/chatbox/widget-thread";
-import { SEARCH_AI_ENABLE_TOGGLE_KEY } from "@/lib/chatbox/search-ai-preferences";
 import { insertConversationMessage } from "@/lib/inbox/conversation-messages";
 import {
   publishConversationUpdated,
   publishMessageCreated,
 } from "@/lib/inbox/event-bus";
 import { fetchWorkspaceConversations } from "@/lib/inbox/snapshot";
-import { toggleSettingKey } from "@/lib/settings/toggles";
-
-async function isSearchAiEnabled(db: AppDatabase, workspaceId: string) {
-  const settingKey = toggleSettingKey("chatbox/search-ai", SEARCH_AI_ENABLE_TOGGLE_KEY);
-  const row = await selectOne(
-    db
-      .select({ value: workspaceSettings.value })
-      .from(workspaceSettings)
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, settingKey),
-        ),
-      ),
-  );
-  return row?.value === "true";
-}
 
 async function markNeedsHuman(db: AppDatabase, conversationId: string) {
   await db
@@ -50,7 +30,8 @@ export async function maybeSendChatAiReply(
     messageText?: string | null;
   },
 ) {
-  if (!(await isSearchAiEnabled(db, workspaceId))) {
+  const cfg = await getWorkspaceAgentConfig(db, workspaceId);
+  if (!cfg.channels.chat.aiAgent) {
     return null;
   }
 
@@ -72,7 +53,6 @@ export async function maybeSendChatAiReply(
   // confidence score is driven by grounding, identity, order context and reply
   // quality; the order-intent heuristic decides whether missing identity/order
   // context should hold the reply back.
-  const cfg = await getWorkspaceAgentConfig(db, workspaceId);
   const customerKnown = Boolean(input.customerEmail);
   const orderContextAvailable = reply.orderContextSource !== "none";
   const orderContextRequired = messageNeedsOrderContext(input.messageText);

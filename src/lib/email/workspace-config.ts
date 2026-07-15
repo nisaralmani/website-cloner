@@ -1,12 +1,26 @@
 /**
- * Per-workspace IMAP/SMTP config (ported from Ai Helpdesk emailConfig.ts).
- * Passwords encrypted at rest; env vars used as fallback for single-tenant cron.
+ * Per-workspace IMAP/SMTP config. Backed by the same generic workspace
+ * settings field storage the Settings -> Email Delivery UI writes to
+ * (email/delivery::*), so a value a user saves there is exactly what gets
+ * used to actually send/receive mail. Passwords are encrypted at rest (see
+ * lib/settings/workspace-settings.ts); env vars remain a fallback for
+ * single-tenant/cron deployments with no per-workspace config saved yet.
  */
-import crypto from "crypto";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { AppDatabase } from "@/db/client";
-import { getDb, selectOne } from "@/db/client";
+import { getDb } from "@/db/client";
 import { workspaceSettings } from "@/db/schema";
+import {
+  loadWorkspaceSettingFields,
+  saveWorkspaceSettingField,
+} from "@/lib/settings/workspace-settings";
+import {
+  DEFAULT_SMTP_FIELDS,
+  EMAIL_DELIVERY_PAGE_SLUG,
+  isImplicitTlsPort,
+  type SmtpFields,
+} from "@/lib/email/smtp-preferences";
+import { EMAIL_CUSTOM_SMTP_KEY, isCustomSmtpEnabled } from "@/lib/email/delivery-preferences";
 
 export interface ImapSettings {
   host: string;
@@ -30,40 +44,6 @@ export interface WorkspaceEmailConfig {
   enabled: boolean;
   imap: ImapSettings;
   smtp: SmtpSettings;
-}
-
-const CONFIG_KEY = "email/inbound::config";
-const ENABLED_KEY = "email/inbound::enabled";
-const ENC_PREFIX = "enc:v1:";
-
-function encryptionKey(): Buffer {
-  const secret = process.env.SESSION_SECRET || "bybelt-dev-secret-change-me";
-  return crypto.scryptSync(secret, "bybelt-email-salt", 32);
-}
-
-export function encryptEmailSecret(plain: string): string {
-  if (!plain) return "";
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  const enc = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return ENC_PREFIX + Buffer.concat([iv, tag, enc]).toString("base64");
-}
-
-export function decryptEmailSecret(stored: string): string {
-  if (!stored) return "";
-  if (!stored.startsWith(ENC_PREFIX)) return stored;
-  try {
-    const raw = Buffer.from(stored.slice(ENC_PREFIX.length), "base64");
-    const iv = raw.subarray(0, 12);
-    const tag = raw.subarray(12, 28);
-    const data = raw.subarray(28);
-    const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), iv);
-    decipher.setAuthTag(tag);
-    return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
-  } catch {
-    return "";
-  }
 }
 
 function envFallback(): WorkspaceEmailConfig {
@@ -97,38 +77,63 @@ export function isSmtpReady(config: WorkspaceEmailConfig): boolean {
   return !!(config.smtp.host && config.smtp.user && config.smtp.password && config.smtp.fromEmail);
 }
 
+function fieldsToConfig(fields: SmtpFields, enabled: boolean): WorkspaceEmailConfig {
+  return {
+    enabled,
+    imap: {
+      host: fields.imapHost.trim(),
+      port: Number(fields.imapPort) || 993,
+      secure: isImplicitTlsPort(fields.imapPort),
+      user: fields.imapUser.trim(),
+      password: fields.imapPassword,
+    },
+    smtp: {
+      host: fields.smtpHost.trim(),
+      port: Number(fields.smtpPort) || 587,
+      secure: isImplicitTlsPort(fields.smtpPort),
+      user: fields.smtpUser.trim(),
+      password: fields.smtpPassword,
+      fromName: fields.smtpFromName.trim(),
+      fromEmail: fields.smtpFrom.trim(),
+    },
+  };
+}
+
+function hasAnyPerWorkspaceConfig(fields: SmtpFields): boolean {
+  return Boolean(
+    fields.smtpHost.trim() ||
+      fields.smtpUser.trim() ||
+      fields.imapHost.trim() ||
+      fields.imapUser.trim(),
+  );
+}
+
 export async function getWorkspaceEmailConfig(
   db: AppDatabase,
   workspaceId: string,
 ): Promise<WorkspaceEmailConfig> {
-  const row = await selectOne(
-    db
-      .select({ value: workspaceSettings.value })
-      .from(workspaceSettings)
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, CONFIG_KEY),
-        ),
-      ),
+  const fields = await loadWorkspaceSettingFields(
+    db,
+    workspaceId,
+    EMAIL_DELIVERY_PAGE_SLUG,
+    DEFAULT_SMTP_FIELDS,
   );
 
-  if (!row?.value) {
+  if (!hasAnyPerWorkspaceConfig(fields)) {
     const fallback = envFallback();
     if (process.env.EMAIL_INGEST_WORKSPACE_ID === workspaceId) {
       return fallback;
     }
-    return { ...fallback, enabled: false, imap: { ...fallback.imap, password: "" }, smtp: { ...fallback.smtp, password: "" } };
+    return {
+      ...fallback,
+      enabled: false,
+      imap: { ...fallback.imap, password: "" },
+      smtp: { ...fallback.smtp, password: "" },
+    };
   }
 
-  try {
-    const parsed = JSON.parse(row.value) as WorkspaceEmailConfig;
-    parsed.imap.password = decryptEmailSecret(parsed.imap.password);
-    parsed.smtp.password = decryptEmailSecret(parsed.smtp.password);
-    return parsed;
-  } catch {
-    return envFallback();
-  }
+  const enabled = await isCustomSmtpEnabled(db, workspaceId);
+  return fieldsToConfig(fields, enabled);
 }
 
 export async function getWorkspaceEmailConfigForWorkspace(workspaceId: string) {
@@ -141,80 +146,33 @@ export async function setWorkspaceEmailConfig(
   workspaceId: string,
   input: WorkspaceEmailConfig,
 ): Promise<void> {
-  const prev = await getWorkspaceEmailConfig(db, workspaceId).catch(() => null);
-  const imapPass = input.imap.password || prev?.imap.password || "";
-  const smtpPass = input.smtp.password || prev?.smtp.password || "";
-  const toStore: WorkspaceEmailConfig = {
-    enabled: input.enabled,
-    imap: { ...input.imap, password: encryptEmailSecret(imapPass) },
-    smtp: { ...input.smtp, password: encryptEmailSecret(smtpPass) },
-  };
+  const fieldWrites: Array<[keyof SmtpFields, string]> = [
+    ["smtpHost", input.smtp.host],
+    ["smtpPort", String(input.smtp.port)],
+    ["smtpUser", input.smtp.user],
+    ["smtpFrom", input.smtp.fromEmail],
+    ["smtpFromName", input.smtp.fromName],
+    ["imapHost", input.imap.host],
+    ["imapPort", String(input.imap.port)],
+    ["imapUser", input.imap.user],
+  ];
+  if (input.smtp.password) fieldWrites.push(["smtpPassword", input.smtp.password]);
+  if (input.imap.password) fieldWrites.push(["imapPassword", input.imap.password]);
 
-  const configExisting = await selectOne(
-    db
-      .select()
-      .from(workspaceSettings)
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, CONFIG_KEY),
-        ),
-      ),
-  );
-
-  if (configExisting) {
-    await db
-      .update(workspaceSettings)
-      .set({ value: JSON.stringify(toStore) })
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, CONFIG_KEY),
-        ),
-      );
-  } else {
-    await db.insert(workspaceSettings).values({
-      workspaceId,
-      settingKey: CONFIG_KEY,
-      value: JSON.stringify(toStore),
-    });
+  for (const [key, value] of fieldWrites) {
+    await saveWorkspaceSettingField(db, workspaceId, EMAIL_DELIVERY_PAGE_SLUG, key, value);
   }
 
-  const enabledExisting = await selectOne(
-    db
-      .select()
-      .from(workspaceSettings)
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, ENABLED_KEY),
-        ),
-      ),
+  await saveWorkspaceSettingField(
+    db,
+    workspaceId,
+    EMAIL_DELIVERY_PAGE_SLUG,
+    EMAIL_CUSTOM_SMTP_KEY,
+    input.enabled ? "true" : "false",
   );
-
-  if (enabledExisting) {
-    await db
-      .update(workspaceSettings)
-      .set({ value: input.enabled ? "true" : "false" })
-      .where(
-        and(
-          eq(workspaceSettings.workspaceId, workspaceId),
-          eq(workspaceSettings.settingKey, ENABLED_KEY),
-        ),
-      );
-  } else {
-    await db.insert(workspaceSettings).values({
-      workspaceId,
-      settingKey: ENABLED_KEY,
-      value: input.enabled ? "true" : "false",
-    });
-  }
 }
 
-export async function getWorkspaceEmailConfigPublic(
-  db: AppDatabase,
-  workspaceId: string,
-) {
+export async function getWorkspaceEmailConfigPublic(db: AppDatabase, workspaceId: string) {
   const config = await getWorkspaceEmailConfig(db, workspaceId);
   return {
     enabled: config.enabled,
@@ -238,15 +196,22 @@ export async function getWorkspaceEmailConfigPublic(
 }
 
 export async function listEmailIngestWorkspaceIds(db: AppDatabase): Promise<string[]> {
+  const ids = new Set<string>();
+
   const envWorkspace = process.env.EMAIL_INGEST_WORKSPACE_ID?.trim();
   if (envWorkspace) {
-    return [envWorkspace];
+    ids.add(envWorkspace);
   }
 
+  const enabledKey = `${EMAIL_DELIVERY_PAGE_SLUG}::${EMAIL_CUSTOM_SMTP_KEY}`;
   const rows = await db
     .select({ workspaceId: workspaceSettings.workspaceId, value: workspaceSettings.value })
     .from(workspaceSettings)
-    .where(eq(workspaceSettings.settingKey, ENABLED_KEY));
+    .where(eq(workspaceSettings.settingKey, enabledKey));
 
-  return rows.filter((row) => row.value === "true").map((row) => row.workspaceId);
+  for (const row of rows) {
+    if (row.value === "true") ids.add(row.workspaceId);
+  }
+
+  return Array.from(ids);
 }

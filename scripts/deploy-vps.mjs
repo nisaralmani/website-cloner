@@ -280,13 +280,31 @@ function main() {
 
   }
 
-  sh(
-
-    `tar --exclude=node_modules --exclude=.git --exclude=.next --exclude=deploy-chat.tar.gz --exclude=.cursor --exclude=agent-transcripts -czf deploy-chat.tar.gz .`,
-
-    { shell: true },
-
-  );
+  const tarCmd =
+    `tar --exclude=node_modules --exclude=.git --exclude=.next --exclude=deploy-chat.tar.gz --exclude=.cursor --exclude=agent-transcripts` +
+    ` --exclude=./.env --exclude=./.env.local --exclude=./.env.vps --exclude=./.env.development.local` +
+    ` --exclude=./.env.test.local --exclude=./.env.production.local --exclude=./.env.txt` +
+    // The production SQLite DB lives only on the VPS (bind-mounted via
+    // docker-compose's `./data:/app/data`) and must never be touched by an
+    // app-code deploy. Packaging the local dev copy here would silently
+    // overwrite the live database on extraction — exclude the whole
+    // directory, not just the known filename, so a renamed/added local file
+    // can't reintroduce this.
+    ` --exclude=./data --exclude=./scripts/decrypted-email-env.json -czf deploy-chat.tar.gz .`;
+  console.log(`\n$ ${tarCmd}`);
+  try {
+    execSync(tarCmd, { cwd: root, shell: true, stdio: ["ignore", "inherit", "pipe"] });
+  } catch (err) {
+    const stderr = err.stderr ? err.stderr.toString() : "";
+    if (err.status === 1 && /file changed as we read it/.test(stderr)) {
+      console.warn(
+        "tar: benign 'file changed as we read it' warning (archive file's own directory mtime changed mid-read) — continuing.",
+      );
+    } else {
+      if (stderr) console.error(stderr);
+      throw err;
+    }
+  }
 
 
 

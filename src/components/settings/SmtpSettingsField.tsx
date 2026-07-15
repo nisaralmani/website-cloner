@@ -49,7 +49,7 @@ export function SmtpSettingsField({
         )}
       >
         <input
-          type={fieldKey === "smtpPassword" ? "password" : "text"}
+          type={fieldKey === "smtpPassword" || fieldKey === "imapPassword" ? "password" : "text"}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={handleBlur}

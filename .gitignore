@@ -57,3 +57,10 @@ next-env.d.ts
 
 # Local temp files
 temp/
+
+# secrets / local artifacts (never commit)
+.env.txt
+scripts/decrypted-email-env.json
+*.tar.gz
+.cursor/
+shopify-app/chat/shopify.app.chat-bybelt.toml

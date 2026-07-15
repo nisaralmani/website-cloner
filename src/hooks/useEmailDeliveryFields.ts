@@ -9,11 +9,18 @@ import {
 
 const EMAIL_DELIVERY_PAGE = "email/delivery";
 
+export type EmailConnectionTestResult = {
+  imap?: { ok: boolean; error?: string };
+  smtp?: { ok: boolean; error?: string };
+};
+
 export function useEmailDeliveryFields(enabled: boolean) {
   const [fields, setFields] = useState<SmtpFields>(DEFAULT_SMTP_FIELDS);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<SmtpFieldKey | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<EmailConnectionTestResult | null>(null);
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/settings/${EMAIL_DELIVERY_PAGE}`);
@@ -81,7 +88,10 @@ export function useEmailDeliveryFields(enabled: boolean) {
         }
 
         const data = (await response.json()) as { key: SmtpFieldKey; value: string };
-        setFields((current) => ({ ...current, [data.key]: data.value }));
+        // Password fields are write-only: keep showing blank locally rather
+        // than echoing the just-typed value back into the input's state.
+        const isPasswordKey = data.key.endsWith("Password");
+        setFields((current) => ({ ...current, [data.key]: isPasswordKey ? "" : data.value }));
         return true;
       } catch (saveError) {
         setFields((current) => ({ ...current, [key]: previous }));
@@ -98,11 +108,35 @@ export function useEmailDeliveryFields(enabled: boolean) {
     [fields],
   );
 
+  const testConnection = useCallback(async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const response = await fetch("/api/settings/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ which: "both" }),
+      });
+      const data = (await response.json().catch(() => ({}))) as EmailConnectionTestResult;
+      setTestResult(data);
+    } catch {
+      setTestResult({
+        imap: { ok: false, error: "Request failed" },
+        smtp: { ok: false, error: "Request failed" },
+      });
+    } finally {
+      setTesting(false);
+    }
+  }, []);
+
   return {
     fields,
     loading,
     error,
     saving,
     updateField,
+    testing,
+    testResult,
+    testConnection,
   };
 }

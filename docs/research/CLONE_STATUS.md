@@ -96,13 +96,18 @@ npm run qa:live   # compare document titles vs bybelt.com
 
 ## Known acceptable gaps
 
+**Audited 2026-07-05** — the app backend is real end-to-end (DB + APIs, not mock) across
+inbox/agent, contacts, visitors, campaigns, helpdesk, analytics, settings (31/31 pages),
+and the storefront chat widget (real sessions, SSE, AI auto-reply, Shopify sync). The
+table below is corrected from an earlier, now-stale pass that had marked several of
+these as mock.
+
 | Gap | Notes |
 |-----|-------|
 | Bybelt Sans font (app) | Inter substitute — proprietary on chat.bybelt.com |
 | Marketing typography | **Bybelt Aeonik Pro** localized on `/en/*` |
-| Live WebSocket / auth | Mock data only |
+| Plugin marketplace | Only **Shopify** is a real integration (OAuth, webhooks, sync). The other 23 cards (Slack, WhatsApp, Telegram, Salesforce, Pipedrive, Zapier, Jira, Discord, Twitter DM, eBay, etc.) are `mock-plugins.ts` roadmap cards with no backend — each would need a real developer account/OAuth app with that third party to become real. Kept as roadmap by design. |
 | Marketing mega-menus | Rich Features + Help panels (icons, descriptions, Bybelt/Hugo promos) |
-| Chat widget bubble | Interactive mock panel (open/close, no live WebSocket) |
 | Live pixel diff | Requires authenticated session on production |
 
 ## Phase history

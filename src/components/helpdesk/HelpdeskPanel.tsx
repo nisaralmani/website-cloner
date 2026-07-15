@@ -257,7 +257,7 @@ export default function HelpdeskPanel() {
   const [previewCategoryId, setPreviewCategoryId] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement>(null);
-  const { upgrade, upgrading } = useUpgradePlan();
+  const { openBilling, opening: upgrading } = useUpgradePlan();
   const {
     articles,
     categories,
@@ -371,8 +371,7 @@ export default function HelpdeskPanel() {
   };
 
   const handleUpgrade = async () => {
-    const ok = await upgrade("Plus");
-    if (ok) await reload();
+    await openBilling();
   };
 
   const isCategories = view === "categories";

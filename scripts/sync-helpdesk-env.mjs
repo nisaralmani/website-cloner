@@ -15,7 +15,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
 const HELPDESK_ENV = process.env.HELPDESK_ENV_PATH || "D:/Ai Helpdesk/.env";
-const FASHIONSIS_WORKSPACE_ID = "e3f25f9d-fd3d-440a-93f1-f3ef0c5db653";
 const ENC_PREFIX = "enc:v1:";
 
 function loadEnvFile(filePath) {
@@ -122,7 +121,6 @@ function main() {
     OPENAI_API_KEY: helpdesk.OPENAI_API_KEY || bydeskProd.OPENAI_API_KEY || "",
     OPENAI_MODEL: helpdesk.OPENAI_MODEL || bydeskProd.OPENAI_MODEL || "gpt-4o-mini",
     CRON_SECRET: bydeskProd.CRON_SECRET || helpdesk.CRON_SECRET || "",
-    EMAIL_INGEST_WORKSPACE_ID: FASHIONSIS_WORKSPACE_ID,
     IMAP_HOST: emailConfig.imap.host,
     IMAP_PORT: String(emailConfig.imap.port),
     IMAP_SECURE: emailConfig.imap.secure ? "true" : "false",

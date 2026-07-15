@@ -1,56 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { UserRound } from "lucide-react";
 import type { WorkspacePlan } from "@/types/billing";
-
-const PLAN_OPTIONS = ["Mini", "Essentials", "Plus"] as const;
+import { useUpgradePlan } from "@/hooks/useUpgradePlan";
 
 type BillingPlansPanelProps = {
   plans: WorkspacePlan[];
   onPlanChanged?: () => void | Promise<void>;
 };
 
-export function BillingPlansPanel({ plans, onPlanChanged }: BillingPlansPanelProps) {
-  const [changingId, setChangingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleChangePlan = async (plan: WorkspacePlan) => {
-    const planTag = window
-      .prompt(
-        `Change plan for ${plan.name} (current: ${plan.planTag}). Enter: ${PLAN_OPTIONS.join(", ")}`,
-        plan.planTag,
-      )
-      ?.trim();
-
-    if (!planTag || planTag === plan.planTag) return;
-    if (!PLAN_OPTIONS.includes(planTag as (typeof PLAN_OPTIONS)[number])) {
-      setError("Invalid plan. Choose Mini, Essentials, or Plus.");
-      return;
-    }
-
-    setChangingId(plan.workspaceId);
-    setError(null);
-    try {
-      const response = await fetch("/api/billing/plans", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: plan.workspaceId,
-          planTag,
-        }),
-      });
-      if (!response.ok) {
-        const data = (await response.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to change plan");
-      }
-      await onPlanChanged?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to change plan.");
-    } finally {
-      setChangingId(null);
-    }
-  };
+export function BillingPlansPanel({ plans }: BillingPlansPanelProps) {
+  const { openBilling, opening, error } = useUpgradePlan();
 
   return (
     <div className="flex flex-col gap-8">
@@ -89,11 +49,11 @@ export function BillingPlansPanel({ plans, onPlanChanged }: BillingPlansPanelPro
           </div>
           <button
             type="button"
-            disabled={changingId === plan.workspaceId}
-            onClick={() => void handleChangePlan(plan)}
+            disabled={opening}
+            onClick={() => void openBilling()}
             className="inline-flex h-[36px] items-center rounded border border-black/10 bg-[#1972F5] px-4 text-[13px] font-bold text-white disabled:opacity-60"
           >
-            {changingId === plan.workspaceId ? "Changing…" : "Change Plan"}
+            {opening ? "Opening…" : "Manage plan in Shopify"}
           </button>
         </div>
       ))}

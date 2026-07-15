@@ -300,7 +300,7 @@ export default function AnalyticsPanel() {
   const [dashboardName, setDashboardName] = useState("");
   const periodRef = useRef<HTMLDivElement>(null);
   const { data, loading, error, reload } = useAnalytics(days);
-  const { upgrade, upgrading } = useUpgradePlan();
+  const { openBilling, opening: upgrading } = useUpgradePlan();
   const [savingTimezone, setSavingTimezone] = useState(false);
   const [ratings, setRatings] = useState<AnalyticsRating[]>([]);
   const [ratingsLoading, setRatingsLoading] = useState(false);
@@ -615,8 +615,8 @@ export default function AnalyticsPanel() {
   }, [data.analyticsEnabled, viewKind]);
 
   const handleUpgrade = async () => {
-    const ok = await upgrade("Essentials");
-    if (ok) await reload();
+    // Redirects to Shopify when the store is linked; otherwise surfaces the block message.
+    await openBilling();
   };
 
   const handleCopyReport = async () => {

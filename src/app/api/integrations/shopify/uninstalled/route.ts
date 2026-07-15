@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isValidInternalSecret, unauthorizedInternal } from "@/lib/auth/internal-request";
 import { deliverWorkspaceWebhooks } from "@/lib/workspaces/webhook-delivery";
 import { getDb } from "@/db/client";
+import { applyShopifyPlan } from "@/lib/billing/apply-shopify-plan";
 
 export async function POST(request: Request) {
   if (!isValidInternalSecret(request)) {
@@ -23,6 +24,18 @@ export async function POST(request: Request) {
   const db = await getDb();
   void deliverWorkspaceWebhooks(db, workspaceId, "integration:shopify_uninstalled", {
     shop: body.shop?.trim() ?? null,
+  });
+
+  // Uninstalling the Shopify app removes billing entirely — there is no longer a
+  // subscription backing this workspace. Shopify is the source of truth, so
+  // revoke the plan immediately (this also clears premium feature flags). The
+  // reconcile sweep cannot cover this case because the Shopify app deletes the
+  // ShopLink on uninstall. Idempotent; a not-found workspace is a no-op.
+  await applyShopifyPlan(db, {
+    workspaceId,
+    planTag: "Free",
+    active: false,
+    shopifySubscriptionId: null,
   });
 
   return NextResponse.json({ ok: true });

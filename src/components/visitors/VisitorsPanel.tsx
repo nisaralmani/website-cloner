@@ -2,13 +2,16 @@
 
 import { useState, type KeyboardEvent } from "react";
 import Image from "next/image";
-import { Globe, Minus, Plus, BookOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Globe, Minus, Plus, BookOpen, MessageCircle, ExternalLink } from "lucide-react";
 import { DOCS_VISITORS_URL } from "@/lib/docs-links";
 import { cn } from "@/lib/utils";
 import { useVisitors } from "@/hooks/useVisitors";
 import type { Visitor } from "@/types/visitors";
 import { VisitorDetailPanel } from "@/components/visitors/VisitorDetailPanel";
 import { PersonGlyph } from "@/components/icons";
+import { useSession } from "@/components/providers/SessionProvider";
+import { appInboxConversationPath } from "@/lib/marketing-paths";
 
 function LiveBadge() {
   return (
@@ -112,17 +115,29 @@ function VisitorRow({
   visitor,
   selected,
   onSelect,
+  onOpenConversation,
+  onOpenPage,
+  startingConversation,
+  pageUrl,
 }: {
   visitor: Visitor;
   selected: boolean;
   onSelect: (visitor: Visitor) => void;
+  onOpenConversation: (visitor: Visitor) => void;
+  onOpenPage: (visitor: Visitor) => void;
+  startingConversation: boolean;
+  pageUrl: string | null;
 }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(visitor)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onSelect(visitor);
+      }}
       className={cn(
-        "flex w-full items-start gap-3 border-b border-[#F4F4F5] px-4 py-3 text-left hover:bg-[#F8F9FB]",
+        "group flex w-full items-start gap-3 border-b border-[#F4F4F5] px-4 py-3 text-left hover:bg-[#F8F9FB]",
         selected && "bg-[#EBF3FE]",
       )}
     >
@@ -144,7 +159,35 @@ function VisitorRow({
         <p className="truncate text-xs text-[#5D6B98]">{visitor.location}</p>
         <p className="truncate text-xs text-[#828EA1]">{visitor.currentPage}</p>
       </div>
-    </button>
+      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        <button
+          type="button"
+          disabled={startingConversation}
+          aria-label={visitor.conversationId ? "Open conversation" : "Start conversation"}
+          title={visitor.conversationId ? "Open conversation" : "Start conversation"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenConversation(visitor);
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded text-[#5D6B98] hover:bg-[#E3E8EF] hover:text-[#1972F5] disabled:opacity-50"
+        >
+          <MessageCircle size={15} />
+        </button>
+        <button
+          type="button"
+          disabled={!pageUrl}
+          aria-label="Open visitor's current page"
+          title={pageUrl ? `Open ${visitor.currentPage}` : "No page URL available"}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenPage(visitor);
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded text-[#5D6B98] hover:bg-[#E3E8EF] hover:text-[#1972F5] disabled:opacity-30"
+        >
+          <ExternalLink size={15} />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -163,14 +206,54 @@ function EmptyState() {
 }
 
 export default function VisitorsPanel() {
+  const router = useRouter();
+  const { workspace } = useSession();
   const [filterInput, setFilterInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
+  const [startingConversationId, setStartingConversationId] = useState<string | null>(null);
   const { visitors, stats, loading, error } = useVisitors(searchQuery);
 
   const handleFilterKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       setSearchQuery(filterInput);
+    }
+  };
+
+  const pageUrlFor = (visitor: Visitor): string | null => {
+    if (!workspace?.domain || !visitor.currentPage) return null;
+    const path = visitor.currentPage.startsWith("/")
+      ? visitor.currentPage
+      : `/${visitor.currentPage}`;
+    return `https://${workspace.domain}${path}`;
+  };
+
+  const handleOpenPage = (visitor: Visitor) => {
+    const url = pageUrlFor(visitor);
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleOpenConversation = async (visitor: Visitor) => {
+    if (visitor.conversationId) {
+      router.push(appInboxConversationPath(visitor.conversationId));
+      return;
+    }
+    setStartingConversationId(visitor.id);
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: visitor.name }),
+      });
+      if (!response.ok) throw new Error("Failed to start conversation");
+      const payload = (await response.json()) as { conversation?: { id: string } };
+      if (!payload.conversation?.id) throw new Error("Missing conversation id");
+      router.push(appInboxConversationPath(payload.conversation.id));
+    } catch {
+      window.alert("Unable to start conversation. Try again.");
+    } finally {
+      setStartingConversationId(null);
     }
   };
 
@@ -220,6 +303,10 @@ export default function VisitorsPanel() {
                   visitor={visitor}
                   selected={selectedVisitor?.id === visitor.id}
                   onSelect={setSelectedVisitor}
+                  onOpenConversation={(v) => void handleOpenConversation(v)}
+                  onOpenPage={handleOpenPage}
+                  startingConversation={startingConversationId === visitor.id}
+                  pageUrl={pageUrlFor(visitor)}
                 />
               ))
             )}

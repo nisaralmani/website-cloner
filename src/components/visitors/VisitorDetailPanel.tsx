@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Visitor } from "@/types/visitors";
 import { PersonGlyph } from "@/components/icons";
 import { appInboxConversationPath } from "@/lib/marketing-paths";
+import { useSession } from "@/components/providers/SessionProvider";
 
 type VisitorDetailPanelProps = {
   visitor: Visitor | null;
@@ -16,9 +17,15 @@ type VisitorDetailPanelProps = {
 
 export function VisitorDetailPanel({ visitor, onClose }: VisitorDetailPanelProps) {
   const router = useRouter();
+  const { workspace } = useSession();
   const [starting, setStarting] = useState(false);
 
   if (!visitor) return null;
+
+  const pageUrl =
+    workspace?.domain && visitor.currentPage
+      ? `https://${workspace.domain}${visitor.currentPage.startsWith("/") ? visitor.currentPage : `/${visitor.currentPage}`}`
+      : null;
 
   const handleStartConversation = async () => {
     setStarting(true);
@@ -71,7 +78,21 @@ export function VisitorDetailPanel({ visitor, onClose }: VisitorDetailPanelProps
         </div>
         <div>
           <dt className="font-semibold uppercase text-[#75869C]">Current page</dt>
-          <dd className="truncate text-[#1C293B]">{visitor.currentPage}</dd>
+          <dd className="flex items-center gap-1.5">
+            <span className="truncate text-[#1C293B]">{visitor.currentPage}</span>
+            {pageUrl && (
+              <a
+                href={pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open visitor's current page"
+                title={`Open ${visitor.currentPage}`}
+                className="shrink-0 text-[#828EA1] hover:text-[#1972F5]"
+              >
+                <ExternalLink size={12} />
+              </a>
+            )}
+          </dd>
         </div>
         <div>
           <dt className="font-semibold uppercase text-[#75869C]">Status</dt>

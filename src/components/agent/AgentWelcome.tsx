@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { DOCS_AI_AGENT_URL } from "@/lib/docs-links";
 import { APP_INBOX_PATH, appSettingsPath, appWidgetPath } from "@/lib/marketing-paths";
@@ -69,14 +68,10 @@ function StepCard({
 }
 
 export default function AgentWelcome() {
-  const router = useRouter();
-  const { upgrade, upgrading } = useUpgradePlan();
+  const { openBilling, opening: upgrading } = useUpgradePlan();
 
   const handleUpgrade = async () => {
-    const ok = await upgrade("Plus");
-    if (ok) {
-      router.push(appSettingsPath("workspace/data"));
-    }
+    await openBilling();
   };
 
   return (

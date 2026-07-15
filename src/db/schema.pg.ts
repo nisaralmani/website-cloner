@@ -555,6 +555,7 @@ export const workspaceSubscriptions = pgTable("workspace_subscriptions", {
   status: text("status").notNull().default("Active"),
   billingOwner: text("billing_owner").notNull().default("none"),
   monthlyCents: integer("monthly_cents").notNull().default(0),
+  shopifySubscriptionId: text("shopify_subscription_id"),
 });
 
 export const paymentMethods = pgTable("payment_methods", {

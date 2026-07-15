@@ -20,4 +20,17 @@ export async function register(): Promise<void> {
   // dependencies so their state is observable in /api/health from boot.
   const { registerReliabilityDefaults } = await import("@/lib/reliability/defaults");
   registerReliabilityDefaults();
+
+  // Billing migration: reset any workspace left on a paid tier by the old plan
+  // simulation but with no backing Shopify subscription. Detached + idempotent,
+  // so it never blocks boot and is a no-op once clean. Skipped during build.
+  if (process.env.NEXT_PHASE !== "phase-production-build") {
+    const { getDb } = await import("@/db/client");
+    const { runJobDetached } = await import("@/lib/jobs");
+    const { backfillOrphanedPaidPlans } = await import("@/lib/billing/backfill-orphaned-plans");
+    runJobDetached("billing:backfill-orphaned-plans", async () => {
+      const db = await getDb();
+      return backfillOrphanedPaidPlans(db);
+    });
+  }
 }

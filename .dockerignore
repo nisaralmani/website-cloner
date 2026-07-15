@@ -14,9 +14,12 @@ dist
 .git
 .gitignore
 
-# Environment files (pass via docker-compose env_file or runtime env vars)
+# Environment files (pass via docker-compose env_file or runtime env vars —
+# baking any of these into the image would let a stale copy silently diverge
+# from the host file docker-compose actually injects at container start)
 .env
 .env.local
+.env.production
 .env.*.local
 
 # Editor / OS

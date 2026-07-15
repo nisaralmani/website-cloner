@@ -1,6 +1,7 @@
 export const SHOPIFY_WEBHOOK_TOPICS = [
   "app/uninstalled",
   "app/scopes_update",
+  "app_subscriptions/update",
   "customers/create",
   "customers/update",
   "customers/delete",

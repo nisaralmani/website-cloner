@@ -2,6 +2,7 @@ import {
   type BybeltShopSettings,
   parseWidgetEnabled,
 } from "./bybelt.server";
+import { assertWorkspaceExists } from "./workspace-validation.server";
 
 type AdminGraphql = {
   graphql: (
@@ -83,6 +84,8 @@ export async function saveBybeltShopSettings(
   shopId: string,
   settings: BybeltShopSettings,
 ): Promise<void> {
+  await assertWorkspaceExists(settings.workspaceId.trim());
+
   const metafields = [
     {
       ownerId: shopId,
