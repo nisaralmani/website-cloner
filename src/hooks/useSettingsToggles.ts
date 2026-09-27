@@ -9,7 +9,6 @@ import { useSession } from "@/components/providers/SessionProvider";
 import { useShortcutPreferencesOptional } from "@/components/providers/ShortcutPreferencesProvider";
 
 import { useInboxCustomizeOptional } from "@/components/providers/InboxCustomizeProvider";
-import { agentDebugLog } from "@/lib/debug-agent-log";
 
 const SHORTCUTS_PAGE = "account/shortcuts";
 const INBOX_CUSTOMIZE_PAGE = "inbox/customize";
@@ -38,21 +37,13 @@ export function useSettingsToggles(pageSlug: string, config: PageConfig) {
       try {
         const response = await fetch(`/api/settings/${pageSlug}`);
         if (!response.ok) {
-          agentDebugLog("useSettingsToggles.ts:load", "settings fetch failed", {
-            pageSlug,
-            status: response.status,
-          }, "H3");
           throw new Error("Failed to load settings");
         }
         const data = (await response.json()) as { toggles: Record<string, boolean> };
         if (!cancelled) {
           setToggles(data.toggles);
         }
-      } catch (settingsError) {
-        agentDebugLog("useSettingsToggles.ts:load", "settings load error surfaced", {
-          pageSlug,
-          message: settingsError instanceof Error ? settingsError.message : "unknown",
-        }, "H3");
+      } catch {
         if (!cancelled) {
           setError("Unable to load settings.");
           setToggles(defaults);

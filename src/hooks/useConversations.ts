@@ -14,7 +14,6 @@ import {
   INBOX_POLL_FALLBACK_MS,
   INBOX_THREAD_POLL_MS,
 } from "@/lib/inbox/realtime";
-import { agentDebugLog } from "@/lib/debug-agent-log";
 
 function maxSortOrder(items: ApiMessage[]): number {
   return items.reduce((max, item) => Math.max(max, item.sortOrder), -1);
@@ -95,20 +94,12 @@ export function useInboxApp(
       const qs = params.size > 0 ? `?${params.toString()}` : "";
       const response = await fetch(`/api/conversations${qs}`);
       if (!response.ok) {
-        agentDebugLog("useConversations.ts:reloadList", "conversations fetch failed", {
-          status: response.status,
-          qs,
-        }, "H1");
         throw new Error("Failed to load conversations");
       }
       const data = (await response.json()) as { conversations: Conversation[] };
       setConversations(data.conversations);
       if (!silent) setListError(null);
-    } catch (loadError) {
-      agentDebugLog("useConversations.ts:reloadList", "conversations load error surfaced", {
-        silent,
-        message: loadError instanceof Error ? loadError.message : "unknown",
-      }, "H1");
+    } catch {
       if (!silent) {
         setListError("Unable to load conversations.");
         setConversations([]);

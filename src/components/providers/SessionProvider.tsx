@@ -11,7 +11,6 @@ import {
 import type { SessionState, SessionUser, SessionWorkspace } from "@/types/session";
 import { isAuthPagePath, loginUrlWithNext } from "@/lib/auth/safe-redirect";
 import { APP_INBOX_PATH, APP_WIDGET_PATH } from "@/lib/marketing-paths";
-import { agentDebugLog } from "@/lib/debug-agent-log";
 
 type SessionContextValue = SessionState & {
   refresh: () => Promise<void>;
@@ -59,31 +58,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch("/api/auth/session");
       if (!response.ok) {
-        agentDebugLog("SessionProvider.tsx:refresh", "session fetch failed", {
-          status: response.status,
-        }, "H2");
         if (response.status === 401 && typeof window !== "undefined") {
           const { pathname, search } = window.location;
           if (isAuthPagePath(pathname)) {
-            agentDebugLog(
-              "SessionProvider.tsx:refresh",
-              "401 on auth page — no redirect",
-              { pathname },
-              "H-loop",
-            );
             setState({ ...emptyState, loading: false });
             return;
           }
 
           const returnTo = `${pathname}${search}`;
-          const loginUrl = loginUrlWithNext(returnTo);
-          agentDebugLog(
-            "SessionProvider.tsx:refresh",
-            "401 redirect to login",
-            { returnTo, loginUrl },
-            "H-loop",
-          );
-          window.location.replace(loginUrl);
+          window.location.replace(loginUrlWithNext(returnTo));
           return;
         }
         setState({ ...emptyState, loading: false });
@@ -97,17 +80,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         workspaces?: SessionWorkspace[];
       };
 
-      agentDebugLog("SessionProvider.tsx:refresh", "session payload", {
-        authenticated: data.authenticated,
-        workspaceId: data.workspace?.id ?? null,
-        workspaceName: data.workspace?.name ?? null,
-      }, "H2");
-
       setState(applySessionPayload(data));
-    } catch (sessionError) {
-      agentDebugLog("SessionProvider.tsx:refresh", "session fetch threw", {
-        message: sessionError instanceof Error ? sessionError.message : "unknown",
-      }, "H2");
+    } catch {
       setState({ ...emptyState, loading: false });
     }
   }, [applySessionPayload]);

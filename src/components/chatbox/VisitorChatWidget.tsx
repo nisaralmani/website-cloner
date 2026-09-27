@@ -13,7 +13,6 @@ import {
   publicHelpdeskArticleApiPath,
   publicHelpdeskListApiPath,
 } from "@/lib/public-helpdesk";
-import { agentDebugLog } from "@/lib/debug-agent-log";
 import type { WidgetIdentifyResult } from "@/lib/chatbox/widget-identify";
 import {
   WIDGET_ESCALATE_RE,
@@ -245,20 +244,11 @@ export default function VisitorChatWidget({
         if (domain) params.set("domain", domain);
         const configResponse = await fetch(`/api/chatbox/config?${params.toString()}`);
         if (!configResponse.ok) {
-          agentDebugLog("VisitorChatWidget.tsx:init", "chatbox config failed", {
-            status: configResponse.status,
-            domain,
-            workspaceIdProp,
-          }, "H4");
           throw new Error("Unable to load chatbox");
         }
         const configData = (await configResponse.json()) as WidgetConfig;
         if (cancelled) return;
         setConfig(configData);
-        agentDebugLog("VisitorChatWidget.tsx:init", "chatbox config loaded", {
-          workspaceId: configData.workspaceId,
-          chatboxVisible: (configData as WidgetConfig & { chatboxVisible?: boolean }).chatboxVisible ?? null,
-        }, "H4");
 
         const storedSessionId =
           typeof window !== "undefined"
@@ -289,11 +279,6 @@ export default function VisitorChatWidget({
           } catch {
             // ignore parse errors
           }
-          agentDebugLog("VisitorChatWidget.tsx:init", "chatbox session failed", {
-            status: sessionResponse.status,
-            error: sessionError,
-            workspaceId: configData.workspaceId,
-          }, "H4");
           throw new Error(sessionError);
         }
 
@@ -307,10 +292,7 @@ export default function VisitorChatWidget({
         setSessionId(sessionData.sessionId);
         setMessages(sessionData.messages);
         lastSortOrderRef.current = maxSortOrder(sessionData.messages);
-      } catch (widgetError) {
-        agentDebugLog("VisitorChatWidget.tsx:init", "chatbox init error surfaced", {
-          message: widgetError instanceof Error ? widgetError.message : "unknown",
-        }, "H4");
+      } catch {
         if (!cancelled) {
           setError("Chat is unavailable right now.");
         }
